@@ -3,8 +3,7 @@ package com.imt.API_joueur.service;
 import com.imt.API_joueur.model.Player;
 import com.imt.API_joueur.repository.PlayerRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PlayerService {
@@ -21,40 +20,54 @@ public class PlayerService {
     }
 
     public double getXpForNextLevel(int currentLevel) {
-        if (currentLevel == 0) return BASE_XP_THRESHOLD;
-
         return BASE_XP_THRESHOLD * Math.pow(XP_MULTIPLIER, currentLevel - 1);
     }
 
+    @Transactional
     public Player addExperience(String username, double amount) {
         Player player = playerRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Ce joueur n'existe pas : " + username));
+                .orElseThrow(() -> new RuntimeException("Joueur introuvable : " + username));
 
-        if (player.getLevel() >= MAX_LEVEL) {
-            return player;
-        }
+        if (player.getLevel() >= MAX_LEVEL) return player;
 
         player.setExperience(player.getExperience() + amount);
 
-        boolean hasLeveledUp = false;
         while (player.getLevel() < MAX_LEVEL) {
             double threshold = getXpForNextLevel(player.getLevel());
-
             if (player.getExperience() >= threshold) {
                 player.setLevel(player.getLevel() + 1);
                 player.setExperience(player.getExperience() - threshold);
-
-                hasLeveledUp = true;
             } else {
                 break;
             }
         }
-
         return playerRepository.save(player);
     }
 
-    public boolean canAddMonster(Player player) {
+    @Transactional
+    public Player addMonster(String username, String monsterId) {
+        Player player = playerRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Joueur introuvable"));
+
         int maxSlots = BASE_MONSTER_SLOTS + player.getLevel();
-        return player.getMonsterIds().size() < maxSlots;
+        if (player.getMonsterIds().size() >= maxSlots) {
+            throw new RuntimeException("Inventaire plein !");
+        }
+
+        player.getMonsterIds().add(monsterId);
+        return playerRepository.save(player);
+    }
+
+    @Transactional
+    public Player removeMonster(String username, String monsterId) {
+        Player player = playerRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Joueur introuvable"));
+
+        if (!player.getMonsterIds().contains(monsterId)) {
+            throw new RuntimeException("Le joueur ne possède pas ce monstre");
+        }
+
+        player.getMonsterIds().remove(monsterId);
+        return playerRepository.save(player);
     }
 }

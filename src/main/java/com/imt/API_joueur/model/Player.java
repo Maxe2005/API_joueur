@@ -2,32 +2,33 @@ package com.imt.API_joueur.model;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.MongoId;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "players")
-@Setter
 @Getter
+@Setter
+@NoArgsConstructor
 public class Player {
 
-    @MongoId
-    private Integer id;
+    @Id
+    private String id;
 
     private String username;
-    private Integer level;
-    private double Experience;
-    private List<String> monsterIds = new ArrayList<>();
 
-    // Constructors
-    public Player() {}
+    private Integer level;
+
+    private double experience;
+
+    private List<String> monsterIds = new ArrayList<>();
 
     public Player(String username) {
         this.username = username;
-        this.level = 0;
-        this.Experience = 0.0;
+        this.level = 1;
+        this.experience = 0.0;
     }
 }
