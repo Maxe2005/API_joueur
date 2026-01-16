@@ -20,7 +20,7 @@ db.players.insertMany([
         "level": 50,
         "experience": 0,
         "monsterIds": []
-    }
+    },
     {
         "username": "Rémy",
         "level": 50,
