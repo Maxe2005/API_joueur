@@ -1,11 +1,5 @@
 spring.application.name: api_joueur
 
-spring:
-  data:
-    mongodb:
-      database: gatcha-player-db
-      port: 27017
-
 # Actuator configuration
 management:
   endpoints:
