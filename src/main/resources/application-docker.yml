@@ -1,0 +1,18 @@
+spring.application.name: api_joueur
+
+spring:
+  data:
+    mongodb:
+      host: mongo_player
+      port: 27017
+      database: gatcha-player-db
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
