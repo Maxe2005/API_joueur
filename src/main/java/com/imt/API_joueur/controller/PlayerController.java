@@ -64,7 +64,7 @@ public class PlayerController {
             @ApiResponse(responseCode = "200", description = "Monstre ajouté"),
             @ApiResponse(responseCode = "400", description = "Inventaire plein ou erreur")
     })
-    @PostMapping("/{username}/monsters")
+    @PostMapping("/{username}/add_monster")
     public ResponseEntity<?> addMonster(
             @PathVariable String username,
             @RequestBody MonsterRequest request) {
