@@ -20,5 +20,5 @@ COPY --from=build /app/target/*.jar app.jar
 # Port
 EXPOSE 8080
 
-# Démarrage
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Démarrage avec le profil Docker
+ENTRYPOINT ["java", "-Dspring.profiles.active=docker", "-jar", "app.jar"]
