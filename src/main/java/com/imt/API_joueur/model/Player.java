@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +23,7 @@ public class Player {
     private String id;
 
     @Schema(description = "Nom unique du joueur", example = "Sacha")
+    @Indexed(unique = true)
     private String username;
 
     @Schema(description = "Niveau actuel (0 à 50)", example = "10")

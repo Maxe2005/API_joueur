@@ -26,6 +26,7 @@ public class PlayerController {
 
     public record XpRequest(double amount) {}
     public record MonsterRequest(String monsterId) {}
+    public record CreatePlayerRequest(String username) {}
 
     @Operation(summary = "Récupérer un joueur", description = "Retourne le niveau, l'expérience et la liste des monstres d'un joueur.")
     @ApiResponses(value = {
@@ -90,6 +91,21 @@ public class PlayerController {
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Créer un nouveau joueur", description = "Inscrit un joueur avec un pseudo unique. Initialise le niveau à 1 et l'XP à 0.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Joueur créé avec succès"),
+            @ApiResponse(responseCode = "409", description = "Le pseudo existe déjà")
+    })
+    @PostMapping
+    public ResponseEntity<?> createPlayer(@RequestBody CreatePlayerRequest request) {
+        try {
+            Player createdPlayer = playerService.createPlayer(request.username());
+            return ResponseEntity.status(201).body(createdPlayer);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(409).body(e.getMessage());
         }
     }
 }

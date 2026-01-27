@@ -70,4 +70,17 @@ public class PlayerService {
         player.getMonsterIds().remove(monsterId);
         return playerRepository.save(player);
     }
+
+    public Player createPlayer(String username) {
+        if (playerRepository.findByUsername(username).isPresent()) {
+            throw new RuntimeException("Ce pseudo est déjà pris !");
+        }
+
+        try {
+            Player newPlayer = new Player(username);
+            return playerRepository.save(newPlayer);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new RuntimeException("Ce pseudo est déjà pris ! (Doublon détecté par la DB)");
+        }
+    }
 }
