@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongo-player:
     image: mongo:latest
@@ -16,7 +14,7 @@ services:
     build: .
     container_name: api-joueur
     ports:
-      - "8081:8080"
+      - "8082:8080"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongo-player:27017/gatcha-player-db
     depends_on:
