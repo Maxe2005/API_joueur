@@ -2,8 +2,9 @@ package com.imt.API_joueur.service;
 
 import com.imt.API_joueur.model.Player;
 import com.imt.API_joueur.repository.PlayerRepository;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+// import org.springframework.transaction.annotation.Transactional; // ON NE L'UTILISE PAS
 
 @Service
 public class PlayerService {
@@ -20,10 +21,11 @@ public class PlayerService {
     }
 
     public double getXpForNextLevel(int currentLevel) {
+        // Niveau 1 -> 50 xp. Niveau 2 -> 50 * 1.1 ...
         return BASE_XP_THRESHOLD * Math.pow(XP_MULTIPLIER, currentLevel - 1);
     }
 
-    @Transactional
+    // Pas de @Transactional ici (cause crash Mongo Standalone)
     public Player addExperience(String username, double amount) {
         Player player = playerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Joueur introuvable : " + username));
@@ -44,10 +46,9 @@ public class PlayerService {
         return playerRepository.save(player);
     }
 
-    @Transactional
     public Player addMonster(String username, String monsterId) {
         Player player = playerRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Joueur introuvable"));
+                .orElseThrow(() -> new RuntimeException("Joueur introuvable : " + username));
 
         int maxSlots = BASE_MONSTER_SLOTS + player.getLevel();
         if (player.getMonsterIds().size() >= maxSlots) {
@@ -58,10 +59,9 @@ public class PlayerService {
         return playerRepository.save(player);
     }
 
-    @Transactional
     public Player removeMonster(String username, String monsterId) {
         Player player = playerRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Joueur introuvable"));
+                .orElseThrow(() -> new RuntimeException("Joueur introuvable : " + username));
 
         if (!player.getMonsterIds().contains(monsterId)) {
             throw new RuntimeException("Le joueur ne possède pas ce monstre");
@@ -72,6 +72,7 @@ public class PlayerService {
     }
 
     public Player createPlayer(String username) {
+        // Double sécurité : check manuel + check DB
         if (playerRepository.findByUsername(username).isPresent()) {
             throw new RuntimeException("Ce pseudo est déjà pris !");
         }
@@ -79,7 +80,7 @@ public class PlayerService {
         try {
             Player newPlayer = new Player(username);
             return playerRepository.save(newPlayer);
-        } catch (org.springframework.dao.DuplicateKeyException e) {
+        } catch (DuplicateKeyException e) {
             throw new RuntimeException("Ce pseudo est déjà pris ! (Doublon détecté par la DB)");
         }
     }
