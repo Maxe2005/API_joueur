@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mongo-player:
+    image: mongo:latest
+    container_name: mongo-player
+    ports:
+      - "27018:27017" # Accès local sur 27018
+    environment:
+      - MONGO_INITDB_DATABASE=gatcha-player-db
+    volumes:
+      - mongodb_player_data:/data/db
+
+  api-joueur:
+    build: .
+    container_name: api-joueur
+    ports:
+      - "8081:8080" # Accès API sur 8081
+    environment:
+      # L'API contacte mongo-player sur le port interne 27017
+      - SPRING_DATA_MONGODB_URI=mongodb://mongo-player:27017/gatcha-player-db
+      # URL de l'API Auth
+      - AUTH_API_URL=http://host.docker.internal:8080/user/verify-token
+    depends_on:
+      - mongo-player
+
+volumes:
+  mongodb_player_data:
