@@ -1,25 +1,25 @@
 package com.imt.API_joueur.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
-    private AuthInterceptor authInterceptor;
+    private final AuthInterceptor authInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/api/players/**") // Protège ton API
+                .addPathPatterns("/api/players/**")
                 .excludePathPatterns(
-                        "/swagger-ui/**",      // Laisse passer Swagger
+                        "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
-                        "/api/players"         // Laisse passer la création de compte (POST /api/players) si tu veux permettre l'inscription sans token
+                        "/api/players" // Autorise la création de compte sans token
                 );
     }
 }
