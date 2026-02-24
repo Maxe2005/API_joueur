@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,24 +15,24 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@Schema(description = "Représente un joueur et son inventaire")
+@Schema(description = "Entité représentant un joueur, son niveau et son inventaire.")
 public class Player {
 
     @Id
-    @Schema(description = "ID unique MongoDB", accessMode = Schema.AccessMode.READ_ONLY)
+    @Schema(description = "Identifiant unique technique (MongoDB)", accessMode = Schema.AccessMode.READ_ONLY)
     private String id;
 
-    @Schema(description = "Nom unique du joueur", example = "Sacha")
     @Indexed(unique = true)
+    @Schema(description = "Nom d'utilisateur unique", example = "Sacha")
     private String username;
 
-    @Schema(description = "Niveau actuel (0 à 50)", example = "10")
+    @Schema(description = "Niveau du joueur (Max 50)", example = "5")
     private Integer level;
 
-    @Schema(description = "Points d'expérience accumulés vers le prochain niveau", example = "150.5")
+    @Schema(description = "Expérience accumulée vers le prochain niveau", example = "150.0")
     private double experience;
 
-    @Schema(description = "Liste des IDs des monstres possédés", example = "[\"pikachu_001\", \"dracaufeu_99\"]")
+    @Schema(description = "Liste des identifiants des monstres dans l'inventaire", example = "[\"pikachu_001\", \"dracaufeu_99\"]")
     private List<String> monsterIds = new ArrayList<>();
 
     public Player(String username) {

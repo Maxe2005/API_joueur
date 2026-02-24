@@ -1,86 +1,86 @@
-// package com.imt.API_joueur.controller;
+package com.imt.API_joueur.controller;
 
-// import com.imt.API_joueur.model.Player;
-// import com.imt.API_joueur.repository.PlayerRepository;
-// import com.imt.API_joueur.service.PlayerService;
-// import org.junit.jupiter.api.Test;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-// import org.springframework.boot.test.mock.mockito.MockBean;
-// import org.springframework.http.MediaType;
-// import org.springframework.test.web.servlet.MockMvc;
+import com.imt.API_joueur.config.AuthInterceptor;
+import com.imt.API_joueur.model.Player;
+import com.imt.API_joueur.repository.PlayerRepository;
+import com.imt.API_joueur.service.PlayerService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-// import java.util.Optional;
+import java.util.Optional;
 
-// import static org.mockito.ArgumentMatchers.*;
-// import static org.mockito.Mockito.when;
-// import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-// import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// @WebMvcTest(PlayerController.class)
-// class PlayerControllerTest {
+// On exclut AuthInterceptor des tests unitaires pour ne pas avoir besoin de mocker l'API Auth ici
+@WebMvcTest(controllers = PlayerController.class,
+        excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = AuthInterceptor.class))
+class PlayerControllerTest {
 
-//     @Autowired
-//     private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-//     @MockBean
-//     private PlayerService playerService;
+    @MockBean
+    private PlayerService playerService;
 
-//     @MockBean
-//     private PlayerRepository playerRepository;
+    @MockBean
+    private PlayerRepository playerRepository;
 
-//     @Test
-//     void shouldReturnPlayerInfo() throws Exception {
-//         Player p = new Player("Sacha");
-//         p.setLevel(5);
+    // Pour éviter l'erreur de chargement de l'intercepteur s'il est quand même chargé par WebMvcTest
+    @MockBean
+    private AuthInterceptor authInterceptor;
 
-//         when(playerRepository.findByUsername("Sacha")).thenReturn(Optional.of(p));
+    @Test
+    void shouldReturnPlayerInfo() throws Exception {
+        Player p = new Player("Sacha");
+        p.setLevel(5);
 
-//         mockMvc.perform(get("/api/players/Sacha")) // Attention: j'ai mis /api/players dans le Controller propre
-//                 .andExpect(status().isOk())
-//                 .andExpect(jsonPath("$.username").value("Sacha"))
-//                 .andExpect(jsonPath("$.level").value(5));
-//     }
+        when(playerRepository.findByUsername("Sacha")).thenReturn(Optional.of(p));
 
-//     @Test
-//     void shouldAddExperience() throws Exception {
-//         Player updated = new Player("Sacha");
-//         updated.setLevel(2);
+        mockMvc.perform(get("/api/players/Sacha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("Sacha"))
+                .andExpect(jsonPath("$.level").value(5));
+    }
 
-//         when(playerService.addExperience(eq("Sacha"), anyDouble())).thenReturn(updated);
+    @Test
+    void shouldAddExperience() throws Exception {
+        Player updated = new Player("Sacha");
+        updated.setLevel(2);
 
-//         String jsonContent = "{\"amount\": 100}";
+        when(playerService.addExperience(eq("Sacha"), anyDouble())).thenReturn(updated);
 
-//         mockMvc.perform(post("/api/players/Sacha/xp")
-//                         .contentType(MediaType.APPLICATION_JSON)
-//                         .content(jsonContent))
-//                 .andExpect(status().isOk())
-//                 .andExpect(jsonPath("$.level").value(2));
-//     }
+        String jsonContent = "{\"amount\": 100}";
 
-//     @Test
-//     void shouldAddMonster() throws Exception {
-//         Player p = new Player("Sacha");
-//         p.getMonsterIds().add("monstre_pikachu_123");
+        mockMvc.perform(post("/api/players/Sacha/xp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.level").value(2));
+    }
 
-//         when(playerService.addMonster(eq("Sacha"), eq("monstre_pikachu_123"))).thenReturn(p);
+    @Test
+    void shouldAddMonster() throws Exception {
+        Player p = new Player("Sacha");
+        p.getMonsterIds().add("monstre_pikachu_123");
 
-//         String jsonContent = "{\"monsterId\": \"monstre_pikachu_123\"}";
+        when(playerService.addMonster(eq("Sacha"), eq("monstre_pikachu_123"))).thenReturn(p);
 
-//         mockMvc.perform(post("/api/players/Sacha/monsters")
-//                         .contentType(MediaType.APPLICATION_JSON)
-//                         .content(jsonContent))
-//                 .andExpect(status().isOk())
-//                 .andExpect(jsonPath("$.monsterIds[0]").value("monstre_pikachu_123"));
-//     }
+        String jsonContent = "{\"monsterId\": \"monstre_pikachu_123\"}";
 
-//     @Test
-//     void shouldRemoveMonster() throws Exception {
-//         Player p = new Player("Sacha");
-
-//         when(playerService.removeMonster(eq("Sacha"), eq("monstre_pikachu_123"))).thenReturn(p);
-
-//         mockMvc.perform(delete("/api/players/Sacha/monsters/monstre_pikachu_123"))
-//                 .andExpect(status().isOk());
-//     }
-// }
+        // Note: J'ai utilisé /monsters comme modifié dans le contrôleur ci-dessus
+        mockMvc.perform(post("/api/players/Sacha/monsters")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonContent))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.monsterIds[0]").value("monstre_pikachu_123"));
+    }
+}

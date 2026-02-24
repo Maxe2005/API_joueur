@@ -8,34 +8,32 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/players")
-@Tag(name = "Joueur", description = "Endpoints pour la gestion du profil, de l'XP et de l'inventaire")
+@Tag(name = "Joueur", description = "Gestion du profil joueur, XP et inventaire")
+@RequiredArgsConstructor
 public class PlayerController {
 
     private final PlayerService playerService;
     private final PlayerRepository playerRepository;
 
-    public PlayerController(PlayerService playerService, PlayerRepository playerRepository) {
-        this.playerService = playerService;
-        this.playerRepository = playerRepository;
-    }
-
+    // --- Records DTO ---
     public record XpRequest(double amount) {}
     public record MonsterRequest(String monsterId) {}
     public record CreatePlayerRequest(String username) {}
 
-    @Operation(summary = "Récupérer un joueur", description = "Retourne le niveau, l'expérience et la liste des monstres d'un joueur.")
-    @ApiResponses(value = {
+    @Operation(summary = "Récupérer un joueur par son pseudo")
+    @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Joueur trouvé"),
             @ApiResponse(responseCode = "404", description = "Joueur introuvable")
     })
     @GetMapping("/{username}")
     public ResponseEntity<Player> getPlayer(
-            @Parameter(description = "Le nom d'utilisateur (ex: Sacha)", required = true)
+            @Parameter(description = "Pseudo du joueur", required = true)
             @PathVariable String username) {
 
         return playerRepository.findByUsername(username)
@@ -43,9 +41,9 @@ public class PlayerController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @Operation(summary = "Ajouter de l'expérience", description = "Ajoute des points d'XP. Si le seuil est atteint, le joueur monte de niveau.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "XP ajoutée avec succès (retourne le joueur mis à jour)"),
+    @Operation(summary = "Ajouter de l'expérience au joueur")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "XP ajoutée"),
             @ApiResponse(responseCode = "404", description = "Joueur introuvable")
     })
     @PostMapping("/{username}/xp")
@@ -53,57 +51,49 @@ public class PlayerController {
             @PathVariable String username,
             @RequestBody XpRequest request) {
         try {
-            Player updatedPlayer = playerService.addExperience(username, request.amount());
-            return ResponseEntity.ok(updatedPlayer);
+            return ResponseEntity.ok(playerService.addExperience(username, request.amount()));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(e.getMessage());
         }
     }
 
-    @Operation(summary = "Ajouter un monstre", description = "Appelé par l'API Invocation. Ajoute l'ID du monstre à l'inventaire.")
-    @ApiResponses(value = {
+    @Operation(summary = "Ajouter un monstre à l'inventaire")
+    @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Monstre ajouté"),
-            @ApiResponse(responseCode = "400", description = "Inventaire plein ou erreur")
+            @ApiResponse(responseCode = "400", description = "Erreur (Inventaire plein, etc.)")
     })
-    @PostMapping("/{username}/add_monster")
+    @PostMapping("/{username}/monsters") // Renommé pour respecter REST standard (plutôt que add_monster)
     public ResponseEntity<?> addMonster(
             @PathVariable String username,
             @RequestBody MonsterRequest request) {
         try {
-            Player updated = playerService.addMonster(username, request.monsterId());
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(playerService.addMonster(username, request.monsterId()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @Operation(summary = "Relâcher un monstre", description = "Supprime un monstre de l'inventaire du joueur.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Monstre supprimé"),
-            @ApiResponse(responseCode = "400", description = "Le joueur ne possède pas ce monstre")
-    })
+    @Operation(summary = "Supprimer un monstre de l'inventaire")
     @DeleteMapping("/{username}/monsters/{monsterId}")
     public ResponseEntity<?> removeMonster(
             @PathVariable String username,
             @PathVariable String monsterId) {
         try {
-            Player updated = playerService.removeMonster(username, monsterId);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(playerService.removeMonster(username, monsterId));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @Operation(summary = "Créer un nouveau joueur", description = "Inscrit un joueur avec un pseudo unique. Initialise le niveau à 1 et l'XP à 0.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Joueur créé avec succès"),
+    @Operation(summary = "Créer un nouveau joueur")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Joueur créé"),
             @ApiResponse(responseCode = "409", description = "Le pseudo existe déjà")
     })
     @PostMapping
     public ResponseEntity<?> createPlayer(@RequestBody CreatePlayerRequest request) {
         try {
-            Player createdPlayer = playerService.createPlayer(request.username());
-            return ResponseEntity.status(201).body(createdPlayer);
+            return ResponseEntity.status(201).body(playerService.createPlayer(request.username()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(409).body(e.getMessage());
         }
