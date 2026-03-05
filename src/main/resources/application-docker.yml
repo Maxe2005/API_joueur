@@ -3,7 +3,7 @@ spring.application.name: api_joueur
 spring:
   data:
     mongodb:
-      host: mongo_player
+      host: mongo-player
       port: 27017
       database: gatcha-player-db
 
