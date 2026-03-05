@@ -1,1 +1,0 @@
-mongoimport --db gatcha-player-db --collection players --file /data/players.json --jsonArray

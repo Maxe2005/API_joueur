@@ -1,10 +1,22 @@
-HELP.md
+### JAVA / MAVEN & GRADLE ###
 target/
-.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.jar
+build/
+.gradle/
+.incremental/
+*.class
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+# Exceptions pour garder les structures de build spécifiques si nécessaire
 !**/src/main/**/target/
 !**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
 
-### STS ###
+### IDE (STS, IntelliJ, VS Code, NetBeans) ###
 .apt_generated
 .classpath
 .factorypath
@@ -12,22 +24,31 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
-### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
 .vscode/
+
+### FICHIERS SYSTÈME (IMPORTANT SUR MAC) ###
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+### CONFIGS LOCALES & SECRETS ###
+# Fichiers que tu as mentionnés
+players.json
+init-mongo.sh
+
+# Sécurité générale
+.env
+.env.local
+.env.*.local
+*.log
