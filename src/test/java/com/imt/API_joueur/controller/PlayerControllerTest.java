@@ -4,6 +4,7 @@ import com.imt.API_joueur.config.AuthInterceptor;
 import com.imt.API_joueur.model.Player;
 import com.imt.API_joueur.repository.PlayerRepository;
 import com.imt.API_joueur.service.PlayerService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -20,7 +21,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// On exclut AuthInterceptor des tests unitaires pour ne pas avoir besoin de mocker l'API Auth ici
 @WebMvcTest(controllers = PlayerController.class,
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = AuthInterceptor.class))
 class PlayerControllerTest {
@@ -34,9 +34,13 @@ class PlayerControllerTest {
     @MockBean
     private PlayerRepository playerRepository;
 
-    // Pour éviter l'erreur de chargement de l'intercepteur s'il est quand même chargé par WebMvcTest
     @MockBean
     private AuthInterceptor authInterceptor;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        when(authInterceptor.preHandle(any(), any(), any())).thenReturn(true);
+    }
 
     @Test
     void shouldReturnPlayerInfo() throws Exception {
@@ -76,11 +80,20 @@ class PlayerControllerTest {
 
         String jsonContent = "{\"monsterId\": \"monstre_pikachu_123\"}";
 
-        // Note: J'ai utilisé /monsters comme modifié dans le contrôleur ci-dessus
         mockMvc.perform(post("/api/players/Sacha/monsters")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonContent))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.monsterIds[0]").value("monstre_pikachu_123"));
+    }
+
+    @Test
+    void shouldRemoveMonster() throws Exception {
+        Player p = new Player("Sacha");
+        // Simulation du retour (même si le controller renvoie void ou ok, le service doit retourner l'objet)
+        when(playerService.removeMonster(eq("Sacha"), eq("monstre_pikachu_123"))).thenReturn(p);
+
+        mockMvc.perform(delete("/api/players/Sacha/monsters/monstre_pikachu_123"))
+                .andExpect(status().isOk());
     }
 }

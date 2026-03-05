@@ -57,7 +57,7 @@ public class PlayerService {
     public Player addMonster(String username, String monsterId) {
         Player player = getPlayerOrThrow(username);
 
-        int maxSlots = BASE_MONSTER_SLOTS + player.getLevel();
+        int maxSlots = BASE_MONSTER_SLOTS + (player.getLevel() - 1);
         if (player.getMonsterIds().size() >= maxSlots) {
             log.warn("Inventaire plein pour {}", username);
             throw new RuntimeException("Inventaire plein !");

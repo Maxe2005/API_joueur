@@ -8,6 +8,8 @@ services:
       - MONGO_INITDB_DATABASE=gatcha-player-db
     volumes:
       - mongodb_player_data:/data/db
+      - ./players.json:/data/players.json
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh
 
   api-joueur:
     build: .
