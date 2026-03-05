@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### autres ###
+players.json
+init-mongo.sh
