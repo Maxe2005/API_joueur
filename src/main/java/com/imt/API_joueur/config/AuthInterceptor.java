@@ -22,12 +22,16 @@ import java.io.IOException;
 @Slf4j
 public class AuthInterceptor implements HandlerInterceptor {
 
-    @Value("${gatcha.auth-api.url}")
-    private String authApiUrl;
+    @Value("${gatcha.auth-api.host}")
+    private String authApiHost;
+
+    @Value("${gatcha.auth-api.port}")
+    private String authApiPort;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String AUTH_ENDPOINT = "/user/verify-token";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
@@ -62,6 +66,8 @@ public class AuthInterceptor implements HandlerInterceptor {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<TokenRequest> entity = new HttpEntity<>(new TokenRequest(token), headers);
+
+        String authApiUrl = (authApiHost + ":" +  authApiPort + AUTH_ENDPOINT);
 
         ResponseEntity<TokenResponse> authResponse = restTemplate.postForEntity(
                 authApiUrl,
