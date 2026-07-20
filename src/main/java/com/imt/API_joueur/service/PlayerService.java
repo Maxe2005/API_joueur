@@ -1,5 +1,9 @@
 package com.imt.API_joueur.service;
 
+import com.imt.API_joueur.exception.DuplicateUsernameException;
+import com.imt.API_joueur.exception.InventoryFullException;
+import com.imt.API_joueur.exception.MonsterNotOwnedException;
+import com.imt.API_joueur.exception.PlayerNotFoundException;
 import com.imt.API_joueur.model.Player;
 import com.imt.API_joueur.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +29,10 @@ public class PlayerService {
      */
     public double getXpForNextLevel(int currentLevel) {
         return BASE_XP_THRESHOLD * Math.pow(XP_MULTIPLIER, currentLevel - 1);
+    }
+
+    public Player getPlayer(String username) {
+        return getPlayerOrThrow(username);
     }
 
     public Player addExperience(String username, double amount) {
@@ -60,7 +68,7 @@ public class PlayerService {
         int maxSlots = BASE_MONSTER_SLOTS + (player.getLevel() - 1);
         if (player.getMonsterIds().size() >= maxSlots) {
             log.warn("Inventaire plein pour {}", username);
-            throw new RuntimeException("Inventaire plein !");
+            throw new InventoryFullException(username);
         }
 
         player.getMonsterIds().add(monsterId);
@@ -72,7 +80,7 @@ public class PlayerService {
         Player player = getPlayerOrThrow(username);
 
         if (!player.getMonsterIds().contains(monsterId)) {
-            throw new RuntimeException("Le joueur ne possède pas ce monstre");
+            throw new MonsterNotOwnedException(username, monsterId);
         }
 
         player.getMonsterIds().remove(monsterId);
@@ -82,19 +90,19 @@ public class PlayerService {
 
     public Player createPlayer(String username) {
         if (playerRepository.findByUsername(username).isPresent()) {
-            throw new RuntimeException("Ce pseudo est déjà pris !");
+            throw new DuplicateUsernameException(username);
         }
 
         try {
             log.info("Création du nouveau joueur : {}", username);
             return playerRepository.save(new Player(username));
         } catch (DuplicateKeyException e) {
-            throw new RuntimeException("Ce pseudo est déjà pris ! (Doublon détecté par la DB)");
+            throw new DuplicateUsernameException(username);
         }
     }
 
     private Player getPlayerOrThrow(String username) {
         return playerRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Joueur introuvable : " + username));
+                .orElseThrow(() -> new PlayerNotFoundException(username));
     }
 }
