@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -34,6 +35,12 @@ public class Player {
 
     @Schema(description = "Liste des identifiants des monstres dans l'inventaire", example = "[\"pikachu_001\", \"dracaufeu_99\"]")
     private List<String> monsterIds = new ArrayList<>();
+
+    // Verrouillage optimiste : évite qu'un XP-grant et un ajout/retrait de monstre concurrents
+    // (ex. deux appels d'API_invocations sur le même joueur) ne s'écrasent l'un l'autre en silence.
+    @Version
+    @Schema(hidden = true)
+    private Long version;
 
     public Player(String username) {
         this.username = username;

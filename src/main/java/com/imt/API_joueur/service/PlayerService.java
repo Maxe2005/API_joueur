@@ -9,6 +9,7 @@ import com.imt.API_joueur.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +23,9 @@ public class PlayerService {
     private static final double XP_MULTIPLIER = 1.1;
     private static final int BASE_XP_THRESHOLD = 50;
     private static final int BASE_MONSTER_SLOTS = 10;
+    // Nombre de nouvelles tentatives en cas de conflit de version (deux mutations concurrentes
+    // sur le même joueur, ex. deux appels d'API_invocations qui se chevauchent).
+    private static final int MAX_SAVE_ATTEMPTS = 3;
 
     /**
      * Calcule l'XP nécessaire pour atteindre le niveau suivant.
@@ -36,17 +40,23 @@ public class PlayerService {
     }
 
     public Player addExperience(String username, double amount) {
-        Player player = getPlayerOrThrow(username);
+        for (int attempt = 1; ; attempt++) {
+            Player player = getPlayerOrThrow(username);
 
-        if (player.getLevel() >= MAX_LEVEL) {
-            log.debug("Le joueur {} est déjà au niveau max.", username);
-            return player;
+            if (player.getLevel() >= MAX_LEVEL) {
+                log.debug("Le joueur {} est déjà au niveau max.", username);
+                return player;
+            }
+
+            player.setExperience(player.getExperience() + amount);
+            checkLevelUp(player);
+
+            try {
+                return playerRepository.save(player);
+            } catch (OptimisticLockingFailureException e) {
+                retryOrThrow(username, attempt, e);
+            }
         }
-
-        player.setExperience(player.getExperience() + amount);
-        checkLevelUp(player);
-
-        return playerRepository.save(player);
     }
 
     private void checkLevelUp(Player player) {
@@ -63,29 +73,56 @@ public class PlayerService {
     }
 
     public Player addMonster(String username, String monsterId) {
-        Player player = getPlayerOrThrow(username);
+        for (int attempt = 1; ; attempt++) {
+            Player player = getPlayerOrThrow(username);
 
-        int maxSlots = BASE_MONSTER_SLOTS + (player.getLevel() - 1);
-        if (player.getMonsterIds().size() >= maxSlots) {
-            log.warn("Inventaire plein pour {}", username);
-            throw new InventoryFullException(username);
+            int maxSlots = BASE_MONSTER_SLOTS + (player.getLevel() - 1);
+            if (player.getMonsterIds().size() >= maxSlots) {
+                log.warn("Inventaire plein pour {}", username);
+                throw new InventoryFullException(username);
+            }
+
+            player.getMonsterIds().add(monsterId);
+
+            try {
+                Player saved = playerRepository.save(player);
+                log.info("Monstre {} ajouté à l'inventaire de {}", monsterId, username);
+                return saved;
+            } catch (OptimisticLockingFailureException e) {
+                retryOrThrow(username, attempt, e);
+            }
         }
-
-        player.getMonsterIds().add(monsterId);
-        log.info("Monstre {} ajouté à l'inventaire de {}", monsterId, username);
-        return playerRepository.save(player);
     }
 
     public Player removeMonster(String username, String monsterId) {
-        Player player = getPlayerOrThrow(username);
+        for (int attempt = 1; ; attempt++) {
+            Player player = getPlayerOrThrow(username);
 
-        if (!player.getMonsterIds().contains(monsterId)) {
-            throw new MonsterNotOwnedException(username, monsterId);
+            if (!player.getMonsterIds().contains(monsterId)) {
+                throw new MonsterNotOwnedException(username, monsterId);
+            }
+
+            player.getMonsterIds().remove(monsterId);
+
+            try {
+                Player saved = playerRepository.save(player);
+                log.info("Monstre {} retiré de l'inventaire de {}", monsterId, username);
+                return saved;
+            } catch (OptimisticLockingFailureException e) {
+                retryOrThrow(username, attempt, e);
+            }
         }
+    }
 
-        player.getMonsterIds().remove(monsterId);
-        log.info("Monstre {} retiré de l'inventaire de {}", monsterId, username);
-        return playerRepository.save(player);
+    /**
+     * Relance la mutation depuis un état à jour après un conflit de version, jusqu'à
+     * MAX_SAVE_ATTEMPTS fois, puis laisse remonter l'exception (409 côté GlobalExceptionHandler).
+     */
+    private void retryOrThrow(String username, int attempt, OptimisticLockingFailureException e) {
+        if (attempt >= MAX_SAVE_ATTEMPTS) {
+            throw e;
+        }
+        log.debug("Conflit de version pour {} (tentative {}/{}), nouvelle tentative", username, attempt, MAX_SAVE_ATTEMPTS);
     }
 
     public Player createPlayer(String username) {

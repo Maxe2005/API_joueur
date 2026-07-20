@@ -3,6 +3,7 @@ package com.imt.API_joueur.exception;
 import com.imt.API_joueur.controller.dto.output.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,6 +33,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({InventoryFullException.class, MonsterNotOwnedException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(RuntimeException e) {
         return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(OptimisticLockingFailureException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("Le joueur a été modifié entre-temps, veuillez réessayer"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
