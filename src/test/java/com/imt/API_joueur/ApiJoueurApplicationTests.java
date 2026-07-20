@@ -5,7 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
-@SpringBootTest
+// spring.data.mongodb.auto-index-creation=false : sans ça, la création d'index Mongo au
+// démarrage du contexte tente une vraie connexion réseau même avec PlayerRepository mocké
+// ci-dessous, et le test échoue si aucun MongoDB n'est lancé (ce que ce test prétend éviter).
+@SpringBootTest(properties = "spring.data.mongodb.auto-index-creation=false")
 class ApiJoueurApplicationTests {
 
 	// On "mock" (simule) le repository.
