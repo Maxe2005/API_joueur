@@ -1,8 +1,10 @@
 package com.imt.API_joueur.controller;
 
 import com.imt.API_joueur.config.AuthInterceptor;
+import com.imt.API_joueur.exception.DuplicateUsernameException;
+import com.imt.API_joueur.exception.InventoryFullException;
+import com.imt.API_joueur.exception.PlayerNotFoundException;
 import com.imt.API_joueur.model.Player;
-import com.imt.API_joueur.repository.PlayerRepository;
 import com.imt.API_joueur.service.PlayerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,8 +15,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -32,9 +32,6 @@ class PlayerControllerTest {
     private PlayerService playerService;
 
     @MockBean
-    private PlayerRepository playerRepository;
-
-    @MockBean
     private AuthInterceptor authInterceptor;
 
     @BeforeEach
@@ -47,7 +44,7 @@ class PlayerControllerTest {
         Player p = new Player("Sacha");
         p.setLevel(5);
 
-        when(playerRepository.findByUsername("Sacha")).thenReturn(Optional.of(p));
+        when(playerService.getPlayer("Sacha")).thenReturn(p);
 
         mockMvc.perform(get("/api/players/Sacha"))
                 .andExpect(status().isOk())
@@ -95,5 +92,52 @@ class PlayerControllerTest {
 
         mockMvc.perform(delete("/api/players/Sacha/monsters/monstre_pikachu_123"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldReturn404WhenPlayerNotFound() throws Exception {
+        when(playerService.getPlayer("Inconnu")).thenThrow(new PlayerNotFoundException("Inconnu"));
+
+        mockMvc.perform(get("/api/players/Inconnu"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void shouldReturn409WhenUsernameAlreadyTaken() throws Exception {
+        when(playerService.createPlayer("Sacha")).thenThrow(new DuplicateUsernameException("Sacha"));
+
+        mockMvc.perform(post("/api/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\": \"Sacha\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void shouldReturn400WhenInventoryFull() throws Exception {
+        when(playerService.addMonster(eq("Sacha"), anyString())).thenThrow(new InventoryFullException("Sacha"));
+
+        mockMvc.perform(post("/api/players/Sacha/monsters")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"monsterId\": \"monstre_x\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void shouldReturn400WhenXpAmountIsNotPositive() throws Exception {
+        mockMvc.perform(post("/api/players/Sacha/xp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\": -10}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturn400WhenUsernameIsBlankOnCreate() throws Exception {
+        mockMvc.perform(post("/api/players")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\": \"\"}"))
+                .andExpect(status().isBadRequest());
     }
 }

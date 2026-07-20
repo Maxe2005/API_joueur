@@ -12,11 +12,14 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
- * Intercepteur chargé de vérifier la validité du token JWT auprès de l'API d'Authentification.
+ * Intercepteur chargé de vérifier la validité du token JWT auprès de l'API d'Authentification,
+ * et d'appliquer la règle d'autorisation "un joueur ne modifie que son propre profil" (sauf ADMIN).
  */
 @Component
 @Slf4j
@@ -28,10 +31,19 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Value("${gatcha.auth-api.port}")
     private String authApiPort;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public AuthInterceptor(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
     private static final String AUTH_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String AUTH_ENDPOINT = "/user/verify-token";
+    private static final String USERNAME_ATTRIBUTE = "username";
+    private static final String ROLE_ATTRIBUTE = "role";
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String PATH_USERNAME_VARIABLE = "username";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws IOException {
@@ -42,10 +54,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        String token = authHeader.startsWith(BEARER_PREFIX) ? authHeader.substring(7) : authHeader;
+        String token = authHeader.startsWith(BEARER_PREFIX) ? authHeader.substring(BEARER_PREFIX.length()) : authHeader;
 
+        TokenResponse authenticatedUser;
         try {
-            return validateToken(request, token);
+            authenticatedUser = validateToken(token);
         } catch (HttpClientErrorException e) {
             log.warn("Refus Auth (401/403) : {}", e.getMessage());
             sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token invalide ou expiré");
@@ -60,9 +73,45 @@ public class AuthInterceptor implements HandlerInterceptor {
             sendJsonError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Service d'authentification indisponible");
             return false;
         }
+
+        if (authenticatedUser == null) {
+            sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token invalide ou expiré");
+            return false;
+        }
+
+        request.setAttribute(USERNAME_ATTRIBUTE, authenticatedUser.user());
+        request.setAttribute(ROLE_ATTRIBUTE, authenticatedUser.role());
+
+        // API_invocations rejoue toujours le token du joueur d'origine (jamais un credential de service),
+        // donc l'identité vérifiée ici EST celle du joueur concerné par l'appel : on peut sans risque
+        // interdire à un joueur de modifier le profil d'un autre (sauf ADMIN).
+        if (!HttpMethod.GET.matches(request.getMethod()) && !isSelfOrAdmin(request, authenticatedUser)) {
+            log.warn("Refus d'autorisation : {} a tenté une opération sur le profil d'un autre joueur", authenticatedUser.user());
+            sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Vous ne pouvez pas modifier le profil d'un autre joueur");
+            return false;
+        }
+
+        return true;
     }
 
-    private boolean validateToken(HttpServletRequest request, String token) {
+    private boolean isSelfOrAdmin(HttpServletRequest request, TokenResponse authenticatedUser) {
+        if (ADMIN_ROLE.equalsIgnoreCase(authenticatedUser.role())) {
+            return true;
+        }
+        String pathUsername = extractPathUsername(request);
+        return pathUsername == null || pathUsername.equals(authenticatedUser.user());
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractPathUsername(HttpServletRequest request) {
+        Object pathVariables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (!(pathVariables instanceof Map)) {
+            return null;
+        }
+        return ((Map<String, String>) pathVariables).get(PATH_USERNAME_VARIABLE);
+    }
+
+    private TokenResponse validateToken(String token) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<TokenRequest> entity = new HttpEntity<>(new TokenRequest(token), headers);
@@ -75,11 +124,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 TokenResponse.class
         );
 
-        if (authResponse.getStatusCode() == HttpStatus.OK && authResponse.getBody() != null) {
-            request.setAttribute("username", authResponse.getBody().user());
-            return true;
-        }
-        return false;
+        return authResponse.getStatusCode() == HttpStatus.OK ? authResponse.getBody() : null;
     }
 
     private void sendJsonError(HttpServletResponse response, int status, String message) throws IOException {
