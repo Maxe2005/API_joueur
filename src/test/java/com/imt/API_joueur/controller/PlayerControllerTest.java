@@ -2,7 +2,6 @@ package com.imt.API_joueur.controller;
 
 import com.imt.API_joueur.config.AuthInterceptor;
 import com.imt.API_joueur.model.Player;
-import com.imt.API_joueur.repository.PlayerRepository;
 import com.imt.API_joueur.service.PlayerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,8 +12,6 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -32,9 +29,6 @@ class PlayerControllerTest {
     private PlayerService playerService;
 
     @MockBean
-    private PlayerRepository playerRepository;
-
-    @MockBean
     private AuthInterceptor authInterceptor;
 
     @BeforeEach
@@ -47,7 +41,7 @@ class PlayerControllerTest {
         Player p = new Player("Sacha");
         p.setLevel(5);
 
-        when(playerRepository.findByUsername("Sacha")).thenReturn(Optional.of(p));
+        when(playerService.getPlayer("Sacha")).thenReturn(p);
 
         mockMvc.perform(get("/api/players/Sacha"))
                 .andExpect(status().isOk())
