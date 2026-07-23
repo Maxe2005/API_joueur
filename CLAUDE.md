@@ -6,6 +6,8 @@ This is `API_joueur`, the Spring Boot / Java 21 player-profile microservice of t
 
 This service has **no standalone way to run itself** — no local `docker-compose.yml` exists here anymore (removed once the root orchestrator took over). It only runs via the root `docker-compose.yaml`, either through the root `make` targets or through this directory's own `Makefile`, which is a thin wrapper (`COMPOSE = docker compose -f ../docker-compose.yaml`, `SVC = api-joueur`) exposing `make up/down/down-v/reset-volumes/ps/logs/build/restart` scoped to this one service. All runtime config (Mongo host/port/db, `AUTH_API_HOST`/`AUTH_API_PORT`) is injected by the root compose's `environment:` block — `application.properties` only holds fallback defaults for running outside Docker.
 
+This repo has no `.env`/`.env.example` of its own. Any new environment variable this service needs must be added to the root repo's `.env`/`.env.exemple` and wired into this service's `environment:` block in the root `docker-compose.yaml` — there is nowhere else the running stack would pick it up from.
+
 ## Commands
 
 ```bash
