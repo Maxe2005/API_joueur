@@ -1,6 +1,6 @@
 package com.imt.API_joueur.config;
 
-import com.imt.API_joueur.dto.auth.TokenResponse;
+import com.imt.commonsecurity.auth.AuthTokenResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -34,14 +33,12 @@ class AuthInterceptorTest {
 
     @BeforeEach
     void setUp() {
-        interceptor = new AuthInterceptor(restTemplate);
-        ReflectionTestUtils.setField(interceptor, "authApiHost", "http://auth-api");
-        ReflectionTestUtils.setField(interceptor, "authApiPort", "8080");
+        interceptor = new AuthInterceptor(restTemplate, "http://auth-api", "8080");
     }
 
     private void stubAuthResponse(String user, String role) {
-        when(restTemplate.postForEntity(any(String.class), any(), eq(TokenResponse.class)))
-                .thenReturn(new ResponseEntity<>(new TokenResponse(user, role), HttpStatus.OK));
+        when(restTemplate.postForEntity(any(String.class), any(), eq(AuthTokenResponse.class)))
+                .thenReturn(new ResponseEntity<>(new AuthTokenResponse(user, role), HttpStatus.OK));
     }
 
     private MockHttpServletRequest requestFor(String method, String pathUsername) {
@@ -109,7 +106,7 @@ class AuthInterceptorTest {
 
     @Test
     void authServiceRejectsToken_returns401() throws Exception {
-        when(restTemplate.postForEntity(any(String.class), any(), eq(TokenResponse.class)))
+        when(restTemplate.postForEntity(any(String.class), any(), eq(AuthTokenResponse.class)))
                 .thenThrow(HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "Unauthorized", null, null, null));
         MockHttpServletRequest request = requestFor("GET", "Sacha");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -120,7 +117,7 @@ class AuthInterceptorTest {
 
     @Test
     void authServiceCrashes_returns401NotServerError() throws Exception {
-        when(restTemplate.postForEntity(any(String.class), any(), eq(TokenResponse.class)))
+        when(restTemplate.postForEntity(any(String.class), any(), eq(AuthTokenResponse.class)))
                 .thenThrow(HttpServerErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR, "Boom", null, null, null));
         MockHttpServletRequest request = requestFor("GET", "Sacha");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -131,7 +128,7 @@ class AuthInterceptorTest {
 
     @Test
     void authServiceUnreachable_returns500() throws Exception {
-        when(restTemplate.postForEntity(any(String.class), any(), eq(TokenResponse.class)))
+        when(restTemplate.postForEntity(any(String.class), any(), eq(AuthTokenResponse.class)))
                 .thenThrow(new ResourceAccessException("connection refused"));
         MockHttpServletRequest request = requestFor("GET", "Sacha");
         MockHttpServletResponse response = new MockHttpServletResponse();
